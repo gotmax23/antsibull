@@ -591,7 +591,8 @@ def rebuild_single_command() -> int:
             deps_dir=app_ctx.extra['data_dir'],
             deps_data=[dependency_data],
             collection_cache=app_ctx.collection_cache,
-            ansible_changelog=ansible_changelog)
+            ansible_changelog=ansible_changelog,
+            download_directory=download_dir)
 
         # Create package and collections directories
         package_dir = os.path.join(tmp_dir, f'ansible-{app_ctx.extra["ansible_version"]}')

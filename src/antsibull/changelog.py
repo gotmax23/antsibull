@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 from collections import defaultdict
 import datetime
 import glob
@@ -297,9 +298,15 @@ class AnsibleCoreChangelogCollector:
 
 async def collect_changelogs(collectors: list[CollectionChangelogCollector],
                              core_collector: AnsibleCoreChangelogCollector,
-                             collection_cache: str | None):
+                             collection_cache: str | None,
+                             download_directory: str | os.PathLike[str] | None = None):
     lib_ctx = app_context.lib_ctx.get()
-    with tempfile.TemporaryDirectory() as tmp_dir:
+    _ctx_mgr = (
+        tempfile.TemporaryDirectory()
+        if download_directory is None
+        else contextlib.nullcontext(download_directory)
+    )
+    with _ctx_mgr as tmp_dir:
         async with aiohttp.ClientSession() as aio_session:
             async with asyncio_pool.AioPool(size=lib_ctx.thread_max) as pool:
                 downloader = CollectionDownloader(aio_session, tmp_dir,
@@ -422,7 +429,8 @@ def get_changelog(
         deps_dir: str | None,
         deps_data: list[DependencyFileData] | None = None,
         collection_cache: str | None = None,
-        ansible_changelog: ChangelogData | None = None
+        ansible_changelog: ChangelogData | None = None,
+        download_directory: str | os.PathLike[str] | None = None,
         ) -> Changelog:
     dependencies: dict[str, DependencyFileData] = {}
 
@@ -464,7 +472,7 @@ def get_changelog(
         CollectionChangelogCollector(collection, versions_per_collection[collection].values())
         for collection in sorted(versions_per_collection.keys())
     ]
-    asyncio.run(collect_changelogs(collectors, core_collector, collection_cache))
+    asyncio.run(collect_changelogs(collectors, core_collector, collection_cache, download_directory))
 
     changelog = []
 
